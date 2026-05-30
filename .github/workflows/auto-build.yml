@@ -867,7 +867,9 @@ jobs:
 
   clear-temp-artifact:
     name: Clear Temp Artifacts
-    if: always()
+    # Keep intermediate artifacts when any upstream job fails so "rerun failed jobs"
+    # can still download outputs from successful jobs in the same workflow run.
+    if: ${{ success() }}
     runs-on: ubuntu-latest
     needs:
       - prerelease
