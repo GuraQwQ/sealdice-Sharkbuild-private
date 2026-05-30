@@ -33,6 +33,13 @@ jobs:
           echo "UI_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
           echo "CORE_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
 
+      - name: Get Build Version
+        id: get-build-version
+        run: |
+          BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "PROJECT_VERSION_C=${BUILD_DATE}-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       - name: Warning
         run: count=$(git log --oneline --since '24 hours ago' | wc -l | tr -d ' '); if [ "$count" -le 0 ]; then echo "$NO_BUILD_PROMPT"; fi
 
@@ -40,6 +47,8 @@ jobs:
       commit-count: ${{ steps.get-commits.outputs.NEW_COMMIT_COUNT }}
       CORE_CID: ${{ steps.get-commit-ids.outputs.CORE_CID }}
       UI_CID: ${{ steps.get-commit-ids.outputs.UI_CID }}
+      BUILD_DATE: ${{ steps.get-build-version.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ steps.get-build-version.outputs.PROJECT_VERSION_C }}
 
   resources-download:
     name: Download Related Resources
@@ -303,7 +312,12 @@ jobs:
   core-build:
     name: Build Core
     runs-on: ubuntu-latest
-    needs: ui-build
+    needs:
+      - ui-build
+      - commit-num-check
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64
@@ -322,6 +336,9 @@ jobs:
         run: sudo apt-get update
       - name: Code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.CORE_REPO_TOKEN }}
       - name: Install Cross-compiler for Windows
         if: matrix.goos == 'windows'
         run: sudo apt-get -y install mingw-w64
@@ -378,10 +395,10 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
         working-directory: ./sealdice-core
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
           if [ $GOOS = 'windows' ]; then
             echo "BINARY_NAME=sealdice-core.exe" >> $GITHUB_ENV;
           else
@@ -404,7 +421,7 @@ jobs:
           GO111MODULE: on
           CGO_ENABLED: ${{ matrix.goos == 'windows' && 1 || 0 }}
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2 -H=windowsgui
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
@@ -418,7 +435,7 @@ jobs:
           GO111MODULE: on
           CGO_ENABLED: 1
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2 -H=windowsgui
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
@@ -439,7 +456,12 @@ jobs:
   core-darwin-build:
     name: Build Core
     runs-on: macos-latest
-    needs: ui-build
+    needs:
+      - ui-build
+      - commit-num-check
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: darwin/amd64 darwin/arm64
@@ -449,6 +471,9 @@ jobs:
     steps:
       - name: Code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.CORE_REPO_TOKEN }}
       - name: Install Go
         uses: actions/setup-go@v5
         with:
@@ -475,9 +500,9 @@ jobs:
       - name: Set Env
         working-directory: ./sealdice-core
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
         env:
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
 
       - name: Build Binary
         env:
@@ -487,7 +512,7 @@ jobs:
           CGO_ENABLED: 1
           CGO_FLAGS: -Werror=unused-variable -Werror=implicit-function-declaration -O2 -mmacosx-version-min=10.12
           CGO_CFLAGS: -mmacosx-version-min=10.12
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
           SEAL_TRUSTED_PRIVATE_KEY: ${{ secrets.SEAL_TRUSTED_PRIVATE_KEY }}
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
@@ -503,6 +528,7 @@ jobs:
     name: PC Pack
     runs-on: ubuntu-latest
     needs:
+      - commit-num-check
       - resources-download
       # - gocqhttp-build
       - core-build
@@ -510,6 +536,9 @@ jobs:
       - lagrange-setup
       - lagrangeV2-setup
       - yogurt-setup
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
@@ -533,9 +562,9 @@ jobs:
           timezone-offset: -480
       - name: Set Env
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
         env:
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
       - name: Get Documents
         uses: actions/download-artifact@v4
         with:
@@ -584,6 +613,9 @@ jobs:
     needs:
       - pc-pack
       - commit-num-check
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
@@ -607,9 +639,9 @@ jobs:
           timezone-offset: -480
       - name: Set Env
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
         env:
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
 
       - name: Get Files
         uses: actions/download-artifact@v4
@@ -622,7 +654,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
         run: |
           cd ./temp && find . -type f | cut -c 3- | tar -zcvf ../sealdice_${PROJECT_VERSION_C}_${GOOS}_${GOARCH}.tar.gz -T -;
           echo "DIST=sealdice_${PROJECT_VERSION_C}_${GOOS}_${GOARCH}.tar.gz" >> $GITHUB_ENV;
@@ -631,7 +663,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
         run: |
           cd ./temp
           find . -type f
@@ -700,6 +732,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pc-pack
+      - commit-num-check
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -713,9 +749,9 @@ jobs:
           timezone-offset: -480
       - name: Set Env
         env:
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
 
       - name: Get Amd64 Files
         uses: actions/download-artifact@v4
@@ -765,6 +801,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pc-pack
+      - commit-num-check
+    env:
+      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -778,9 +818,9 @@ jobs:
           timezone-offset: -480
       - name: Set Env
         env:
-          CUR_TIME: ${{ steps.currentTime.outputs.time }}
+          CUR_TIME: ${{ env.BUILD_DATE }}
         run: |
-          echo "PROJECT_VERSION_C=${CUR_TIME}-${COMMIT_ID::7}" >> $GITHUB_ENV;
+          echo "PROJECT_VERSION_C=${PROJECT_VERSION_C}" >> $GITHUB_ENV;
 
       - name: Get Amd64 Files
         uses: actions/download-artifact@v4

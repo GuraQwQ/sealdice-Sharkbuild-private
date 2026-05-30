@@ -1,0 +1,3 @@
+[submodule "sealdice-core"]
+	path = sealdice-core
+	url = https://github.com/GuraQwQ/sealdice-Sharkcore-private.git
