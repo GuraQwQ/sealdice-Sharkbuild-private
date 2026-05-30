@@ -34,7 +34,7 @@ jobs:
           echo "CORE_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
 
       - name: Warning
-        run: if [ "$(git log --oneline --since '24 hours ago' | wc -l)" -le 0 ]; then echo "$NO_BUILD_PROMPT"; fi
+        run: count=$(git log --oneline --since '24 hours ago' | wc -l | tr -d ' '); if [ "$count" -le 0 ]; then echo "$NO_BUILD_PROMPT"; fi
 
     outputs:
       commit-count: ${{ steps.get-commits.outputs.NEW_COMMIT_COUNT }}
