@@ -1,4 +1,4 @@
-﻿name: Auto Build
+name: Auto Build
 on:
   # schedule:
   #   # 每天 UTC 12:00（即北京时间 20:00）自动执行
@@ -30,17 +30,16 @@ jobs:
       - name: Get Commit IDs
         id: get-commit-ids
         run: |
-          echo "UI_CID=`cd sealdice-ui && git rev-parse HEAD`" >> $GITHUB_OUTPUT;
-          echo "CORE_CID=`cd sealdice-core && git rev-parse HEAD`" >> $GITHUB_OUTPUT;
+          echo "UI_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
+          echo "CORE_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
 
       - name: Warning
-        run: if [ $(git log --oneline --since '24 hours ago' | wc -l) <= 0 ]; then echo $NO_BUILD_PROMPT; fi
+        run: if [ "$(git log --oneline --since '24 hours ago' | wc -l)" -le 0 ]; then echo "$NO_BUILD_PROMPT"; fi
 
     outputs:
       commit-count: ${{ steps.get-commits.outputs.NEW_COMMIT_COUNT }}
       CORE_CID: ${{ steps.get-commit-ids.outputs.CORE_CID }}
       UI_CID: ${{ steps.get-commit-ids.outputs.UI_CID }}
-      PROJECT_VERSION: ${{ steps.get-version.outputs.PROJECT_VERSION }}
 
   resources-download:
     name: Download Related Resources
