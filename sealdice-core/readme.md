@@ -1,4 +1,4 @@
-# SealDice
+# sealdice-Sharkcore-private
 
 ![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
 ![Core](https://img.shields.io/badge/SealDice-Core-blue)
@@ -7,16 +7,18 @@
 
 轻量 · 易用 · 全能
 
+私有构建仓库：[sealdice-Sharkbuild-private](https://github.com/GuraQwQ/sealdice-Sharkbuild-private)。
+
 ## 文档
 
 见 [使用手册](https://sealdice.github.io/sealdice-manual-next/)。
 
 ## SealDice Project
 
-- [核心](https://github.com/sealdice/sealdice-core)（本仓库）：Go 后端代码仓库，也作为海豹的主仓库，Bug 可反馈在该仓库的 issue 中；
+- [核心](https://github.com/GuraQwQ/sealdice-Sharkcore-private)（本仓库）：Go 后端代码仓库，也作为海豹的主仓库，Bug 可反馈在该仓库的 issue 中；
 - [UI](https://github.com/sealdice/sealdice-ui)：前端代码，基于 Vue3 + ElementPlus 开发；
 - [手册](https://github.com/sealdice/sealdice-manual-next)：官方手册源码，由 VitePress 驱动；
-- [构建](https://github.com/sealdice/sealdice-build)：自动构建仓库，用于自动化发布海豹的每日构建包与 Release；
+- [构建](https://github.com/GuraQwQ/sealdice-Sharkbuild-private)：自动构建仓库，用于自动化发布海豹的每日构建包与 Release；
 - [Android](https://github.com/sealdice/sealdice-android)：Android 应用源码；
 - ……
 
@@ -26,7 +28,7 @@
 
 ### golang 开发环境
 
-编译的 golang 版本为 1.25.0。在 [构建](https://github.com/sealdice/sealdice-build) 仓库中采用对 go 进行修补的方式以支持 Windows 7 等低版本系统。
+编译的 golang 版本为 1.25.0。在 [构建](https://github.com/GuraQwQ/sealdice-Sharkbuild-private) 仓库中采用对 go 进行修补的方式以支持 Windows 7 等低版本系统。
 
 因部分依赖库的需求，可能需要配置国内镜像，个人使用 <https://goproxy.cn/> 镜像。
 

@@ -1,10 +1,12 @@
-# SealDice Private Build
+# sealdice-Sharkbuild-private
 
 本仓库基于 [sealdice/sealdice-build](https://github.com/sealdice/sealdice-build) 结构，用于私有自动构建。
 
+核心仓库：[sealdice-Sharkcore-private](https://github.com/GuraQwQ/sealdice-Sharkcore-private)。
+
 ## 仓库内容
 
-- `sealdice-core`：来自 `GuraQwQ/sealdice-core-private` 的完整核心源码。
+- `sealdice-core`：来自 [`GuraQwQ/sealdice-Sharkcore-private`](https://github.com/GuraQwQ/sealdice-Sharkcore-private) 的完整核心源码。
 - `sealdice-ui`：来自 `sealdice/sealdice-ui` 的完整前端源码。
 - `sealdice-builtins`：来自 `sealdice/sealdice-builtins` 的完整内置资源，包含 `data` 下牌堆、helpdoc、图片、名字库等。
 - `scripts`：Docker 打包脚本。
