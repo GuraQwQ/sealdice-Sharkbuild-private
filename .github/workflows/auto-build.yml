@@ -733,6 +733,9 @@ jobs:
     needs:
       - pc-pack
       - commit-num-check
+    permissions:
+      contents: read
+      packages: write
     env:
       BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
       PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
@@ -802,6 +805,9 @@ jobs:
     needs:
       - pc-pack
       - commit-num-check
+    permissions:
+      contents: read
+      packages: write
     env:
       BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
       PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
