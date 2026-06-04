@@ -1,0 +1,42 @@
+# Jetbrains
+.idea
+
+# Local editor files
+/.vscode/
+/.history/
+
+# Build outputs and package artifacts
+/dist/
+/temp/
+/output/
+*.zip
+*.tar.gz
+*.APK
+*.apk
+
+# UI dependencies/cache
+node_modules/
+sealdice-ui/dist/
+sealdice-ui/node_modules/
+sealdice-sharkui/
+
+# Core local data/cache
+sealdice-core/.gocache/
+sealdice-core/.gomodcache/
+sealdice-core/.devtools/
+sealdice-core/.tmp/
+sealdice-core/data/
+sealdice-core/configs/
+sealdice-core/*.exe
+sealdice-core/.env
+
+# Local CodeGraph index/cache
+.codegraph/
+
+# Local machine-only files
+.devtools/
+.gocache/
+.gomodcache/
+.tmp/
+.gopath/
+该项目开发须知.local.md

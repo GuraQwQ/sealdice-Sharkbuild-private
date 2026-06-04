@@ -1,0 +1,8 @@
+[submodule "sealdice-core"]
+	path = sealdice-core
+	url = https://github.com/GuraQwQ/sealdice-Sharkcore-private.git
+	branch = main
+[submodule "sealdice-ui"]
+	path = sealdice-ui
+	url = https://github.com/GuraQwQ/sealdice-sharkui.git
+	branch = master
