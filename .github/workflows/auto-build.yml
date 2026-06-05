@@ -261,6 +261,9 @@ jobs:
     steps:
       - name: Code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.CORE_REPO_TOKEN }}
 
       - name: Get Commit ID
         run: |
