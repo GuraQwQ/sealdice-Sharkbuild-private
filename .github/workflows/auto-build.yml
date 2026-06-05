@@ -267,7 +267,7 @@ jobs:
 
       - name: Get Commit ID
         run: |
-          cd sealdice-ui
+          cd sealdice-sharkui
           echo "UI_CID=`git rev-parse --short HEAD`" >> $GITHUB_ENV;
 
       - name: Cache ui dist get
@@ -276,13 +276,13 @@ jobs:
         env:
           cache-name: cache-ui-dist
         with:
-          path: ./sealdice-ui/dist
+          path: ./sealdice-sharkui/dist
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.UI_CID }}
 
       - if: ${{ steps.cache-ui-dist.outputs.cache-hit == 'true' }}
         name: Show cache
         continue-on-error: true
-        run: ls ./sealdice-ui/dist
+        run: ls ./sealdice-sharkui/dist
 
       - name: Install Pnpm
         uses: pnpm/action-setup@v4
@@ -298,18 +298,18 @@ jobs:
           node-version: 20
       - name: Install Dependencies
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
-        working-directory: ./sealdice-ui
+        working-directory: ./sealdice-sharkui
         run: pnpm install
       - name: Build WebUI
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
-        working-directory: ./sealdice-ui
+        working-directory: ./sealdice-sharkui
         run: pnpm run build-only
 
       - name: Upload UI
         uses: actions/upload-artifact@v4
         with:
-          name: sealdice-ui
-          path: ./sealdice-ui/dist
+          name: sealdice-sharkui
+          path: ./sealdice-sharkui/dist
 
   core-build:
     name: Build Core
@@ -387,7 +387,7 @@ jobs:
       - name: Get UI Resources
         uses: actions/download-artifact@v4
         with:
-          name: sealdice-ui
+          name: sealdice-sharkui
           path: ./sealdice-core/static/frontend
 
       - name: Get current time
@@ -497,7 +497,7 @@ jobs:
       - name: Get UI Resources
         uses: actions/download-artifact@v4
         with:
-          name: sealdice-ui
+          name: sealdice-sharkui
           path: ./sealdice-core/static/frontend
 
       - name: Get current time
@@ -901,7 +901,7 @@ jobs:
             documents
             go-cqhttp*
             lagrange*
-            sealdice-ui
+            sealdice-sharkui
             sealdice-core*
             sealdice-prerelease*
             lagrangeV2*

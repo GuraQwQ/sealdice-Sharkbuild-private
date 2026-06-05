@@ -14,7 +14,7 @@ Build: [GuraQwQ/sealdice-Sharkbuild-private](https://github.com/GuraQwQ/sealdice
 
 指向 Sharkcore 私有仓库的 git submodule。构建时使用当前提交指针，避免 build 仓库手动展开核心源码。
 
-`sealdice-ui`
+`sealdice-sharkui`
 
 Web UI 源码或构建所需内容。
 
