@@ -432,7 +432,13 @@ jobs:
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
-        run: go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+        run: |
+          go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          if [ "$GOOS" = "windows" ]; then
+            go build -o "output/seal-updater.exe" -trimpath -ldflags "-s -w" ./cmd/seal-updater
+          else
+            go build -o "output/seal-updater" -trimpath -ldflags "-s -w" ./cmd/seal-updater
+          fi
       - name: Build Binary (linux musl)
         if: matrix.goos == 'linux'
         env:
@@ -446,7 +452,9 @@ jobs:
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
-        run: go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+        run: |
+          go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          go build -tags musl -o "output/seal-updater" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static'" ./cmd/seal-updater
       - name: Run UPX
         uses: crazy-max/ghaction-upx@v3
         with:
@@ -527,7 +535,9 @@ jobs:
           SEAL_SIGN_PRIVATE_KEY: ${{ secrets.SEAL_SIGN_PRIVATE_KEY }}
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
-        run: go build -o "output/sealdice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev  -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+        run: |
+          go build -o "output/sealdice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev  -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          go build -o "output/seal-updater" -trimpath -ldflags "-s -w" ./cmd/seal-updater
       - name: Upload Core
         uses: actions/upload-artifact@v4
         with:
@@ -609,7 +619,7 @@ jobs:
 
       - name: Set Execute Attribute
         if: matrix.goos != 'windows'
-        run: chmod +x ./sealdice-core
+        run: chmod +x ./sealdice-core ./seal-updater
 
       - name: Upload
         uses: actions/upload-artifact@v4
