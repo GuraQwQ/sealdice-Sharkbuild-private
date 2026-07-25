@@ -344,7 +344,7 @@ jobs:
       - name: Track latest Sharkcore
         run: |
           git submodule sync --recursive
-          git submodule update --init --remote --recursive sealdice-core
+          git submodule update --init --recursive sealdice-core
       - name: Install Cross-compiler for Windows
         if: matrix.goos == 'windows'
         run: sudo apt-get -y install mingw-w64
@@ -491,7 +491,7 @@ jobs:
       - name: Track latest Sharkcore
         run: |
           git submodule sync --recursive
-          git submodule update --init --remote --recursive sealdice-core
+          git submodule update --init --recursive sealdice-core
       - name: Install Go
         uses: actions/setup-go@v5
         with:
