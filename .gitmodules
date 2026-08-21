@@ -5,4 +5,4 @@
 [submodule "sealdice-sharkui"]
 	path = sealdice-sharkui
 	url = https://github.com/GuraQwQ/sealdice-sharkui.git
-	branch = master
+	branch = main
