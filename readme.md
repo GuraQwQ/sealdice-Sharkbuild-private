@@ -40,5 +40,11 @@ git fetch origin
 git checkout <target-core-commit>
 cd ..
 git add sealdice-core
-git commit -m "chore: update sharkcore submodule"
+git commit -m "更新鲨鲨核心构建指针"
 ```
+
+Core 和 UI 都按本仓库的 gitlink 提交构建。核心版本元数据使用 Core 提交，安装包名称使用 Build 提交；包内的 `build-info.json` 记录 Build、Core、UI 三个完整提交供核对。
+
+当前工具链为 Go 1.25.14、Node.js 22 和 pnpm 11，前端按锁文件安装。Go 版本与官方 Core 要求对齐，Windows 补丁按对应 Go 源码维护；更新工具链时由构建维护者同时验证补丁应用和编译。核心始终嵌入指定 Shark UI 的完整构建产物，生成步骤检查入口资源是否齐全。
+
+`workflow_dispatch` 可以在候选分支生成构建产物，`main` 分支负责发布与镜像推送。同步的行为取舍和迁移说明位于 Core 的 `docs/sync-upstream-20261111.md`。

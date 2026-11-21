@@ -9,28 +9,23 @@ on:
   workflow_dispatch:
 
 env:
-  COMMIT_ID: "${{ github.sha }}"
-  NO_BUILD_PROMPT: "no new commits, no need to build."
   NT_SIGN_URL: ${{ secrets.NT_SIGN_URL }}
 
 jobs:
-  commit-num-check:
-    name: Check Commit Num
+  build-inputs:
+    name: Resolve Build Inputs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get New Commits
-        id: get-commits
-        run: echo "NEW_COMMIT_COUNT=$(git log --oneline --since '24 hours ago' | wc -l)" >> $GITHUB_OUTPUT
-
       - name: Get Commit IDs
         id: get-commit-ids
         run: |
-          echo "UI_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
-          echo "CORE_CID=`git rev-parse HEAD`" >> $GITHUB_OUTPUT;
+          echo "BUILD_CID=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "CORE_CID=$(git rev-parse HEAD:sealdice-core)" >> "$GITHUB_OUTPUT"
+          echo "UI_CID=$(git rev-parse HEAD:sealdice-sharkui)" >> "$GITHUB_OUTPUT"
 
       - name: Get Build Version
         id: get-build-version
@@ -39,11 +34,8 @@ jobs:
           echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_OUTPUT
           echo "PROJECT_VERSION_C=${BUILD_DATE}-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: Warning
-        run: count=$(git log --oneline --since '24 hours ago' | wc -l | tr -d ' '); if [ "$count" -le 0 ]; then echo "$NO_BUILD_PROMPT"; fi
-
     outputs:
-      commit-count: ${{ steps.get-commits.outputs.NEW_COMMIT_COUNT }}
+      BUILD_CID: ${{ steps.get-commit-ids.outputs.BUILD_CID }}
       CORE_CID: ${{ steps.get-commit-ids.outputs.CORE_CID }}
       UI_CID: ${{ steps.get-commit-ids.outputs.UI_CID }}
       BUILD_DATE: ${{ steps.get-build-version.outputs.BUILD_DATE }}
@@ -52,32 +44,37 @@ jobs:
   resources-download:
     name: Download Related Resources
     runs-on: ubuntu-latest
-    needs: commit-num-check
-    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    needs: build-inputs
     steps:
       - name: Code
         uses: actions/checkout@v4
+      - name: 校验内置资源目录
+        run: |
+          for directory in decks helpdoc images names; do
+            test -d "sealdice-builtins/data/$directory"
+            test -n "$(find "sealdice-builtins/data/$directory" -type f -print -quit)"
+          done
       - name: Upload Documents
         uses: actions/upload-artifact@v4
         with:
           name: documents
           path: ./sealdice-builtins/data
+          if-no-files-found: error
 
   lagrange-download:
     name: Download Lagrange
     runs-on: ubuntu-latest
-    needs: commit-num-check
-    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    needs: build-inputs
     steps:
       - name: Download
         run: |
           mkdir lag
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_linux-arm64_8.0.zip?v=3 > lag/Lagrange.OneBot.linux-arm64.zip
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_linux-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.linux-amd64.zip
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_win-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.windows-amd64.zip
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_win-x86_8.0.zip?v=3 > lag/Lagrange.OneBot.windows-386.zip
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_osx-arm64_8.0.zip?v=3 > lag/Lagrange.OneBot.darwin-arm64.zip
-          curl https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_osx-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.darwin-amd64.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_linux-arm64_8.0.zip?v=3 > lag/Lagrange.OneBot.linux-arm64.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_linux-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.linux-amd64.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_win-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.windows-amd64.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_win-x86_8.0.zip?v=3 > lag/Lagrange.OneBot.windows-386.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_osx-arm64_8.0.zip?v=3 > lag/Lagrange.OneBot.darwin-arm64.zip
+          curl --fail --location --retry 3 https://d1.sealdice.com/lagrange/0.0.6/Lagrange.OneBot_osx-x64_8.0.zip?v=3 > lag/Lagrange.OneBot.darwin-amd64.zip
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -88,8 +85,7 @@ jobs:
   lagrangeV2-download:
     name: Download LagrangeV2
     runs-on: ubuntu-latest
-    needs: commit-num-check
-    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    needs: build-inputs
     steps:
       - name: Download
         run: |
@@ -108,8 +104,7 @@ jobs:
   yogurt-download:
     name: Download Yogurt
     runs-on: ubuntu-latest
-    needs: commit-num-check
-    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    needs: build-inputs
     steps:
       - name: Download
         run: |
@@ -256,8 +251,7 @@ jobs:
   ui-build:
     name: Build UI
     runs-on: ubuntu-latest
-    needs: commit-num-check
-    if: ${{ needs.commit-num-check.outputs.commit-count > 0 }}
+    needs: build-inputs
     steps:
       - name: Code
         uses: actions/checkout@v4
@@ -265,10 +259,10 @@ jobs:
           submodules: recursive
           token: ${{ secrets.CORE_REPO_TOKEN }}
 
-      - name: Get Commit ID
-        run: |
-          cd sealdice-sharkui
-          echo "UI_CID=`git rev-parse --short HEAD`" >> $GITHUB_ENV;
+      - name: 校验 UI 构建输入
+        env:
+          UI_CID: ${{ needs.build-inputs.outputs.UI_CID }}
+        run: test "$(git -C sealdice-sharkui rev-parse HEAD)" = "$UI_CID"
 
       - name: Cache ui dist get
         id: cache-ui-dist
@@ -277,7 +271,7 @@ jobs:
           cache-name: cache-ui-dist
         with:
           path: ./sealdice-sharkui/dist
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.UI_CID }}
+          key: ${{ runner.os }}-sharkui-node22-pnpm11-${{ needs.build-inputs.outputs.UI_CID }}
 
       - if: ${{ steps.cache-ui-dist.outputs.cache-hit == 'true' }}
         name: Show cache
@@ -288,38 +282,46 @@ jobs:
         uses: pnpm/action-setup@v4
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
         with:
-          version: 10
+          version: 11
           run_install: false
 
       - name: Install Node
         uses: actions/setup-node@v4
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
         with:
-          node-version: 20
+          node-version: 22
       - name: Install Dependencies
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
         working-directory: ./sealdice-sharkui
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Build WebUI
         if: ${{ steps.cache-ui-dist.outputs.cache-hit != 'true' }}
         working-directory: ./sealdice-sharkui
         run: pnpm run build-only
 
+      - name: 校验前端产物
+        run: |
+          test -s ./sealdice-sharkui/dist/index.html
+          test -n "$(find ./sealdice-sharkui/dist/assets -type f -name '*.js' -print -quit)"
       - name: Upload UI
         uses: actions/upload-artifact@v4
         with:
           name: sealdice-sharkui
           path: ./sealdice-sharkui/dist
+          if-no-files-found: error
 
   core-build:
     name: Build Core
     runs-on: ubuntu-latest
     needs:
       - ui-build
-      - commit-num-check
+      - build-inputs
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_CID: ${{ needs.build-inputs.outputs.BUILD_CID }}
+      CORE_CID: ${{ needs.build-inputs.outputs.CORE_CID }}
+      UI_CID: ${{ needs.build-inputs.outputs.UI_CID }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64
@@ -341,10 +343,10 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.CORE_REPO_TOKEN }}
-      - name: 检出构建指针指定的 Sharkcore
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive sealdice-core
+      - name: 校验 Core 构建输入
+        env:
+          CORE_CID: ${{ needs.build-inputs.outputs.CORE_CID }}
+        run: test "$(git -C sealdice-core rev-parse HEAD)" = "$CORE_CID"
       - name: Install Cross-compiler for Windows
         if: matrix.goos == 'windows'
         run: sudo apt-get -y install mingw-w64
@@ -359,7 +361,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.7"  # 1.25.8 不兼容 patch 暂时锁定版本
+          go-version: "1.25.14"
           cache-dependency-path: sealdice-core/go.sum
 
       # copy from https://github.com/MetaCubeX/mihomo/blob/dbb002a5ba2e0e79158fd6e3264ac44aedf0bf72/.github/workflows/build.yml#L157-L173
@@ -382,13 +384,23 @@ jobs:
       - name: Install Dependencies
         working-directory: ./sealdice-core
         run: |
-          go mod tidy
-          go get .
+          go mod download
+          go mod verify
+      - name: 准备前端嵌入目录
+        run: |
+          test -d ./sealdice-core/static/frontend
+          find ./sealdice-core/static/frontend -type f -delete
       - name: Get UI Resources
         uses: actions/download-artifact@v4
         with:
           name: sealdice-sharkui
           path: ./sealdice-core/static/frontend
+      - name: 校验并生成嵌入资源
+        working-directory: ./sealdice-core
+        run: |
+          test -s static/frontend/index.html
+          test -n "$(find static/frontend/assets -type f -name '*.js' -print -quit)"
+          go generate ./...
 
       - name: Get current time
         uses: Kaven-Universe/github-action-current-date-time@v1
@@ -433,7 +445,7 @@ jobs:
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
         run: |
-          go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          go build -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${CORE_CID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
           if [ "$GOOS" = "windows" ]; then
             go build -o "output/seal-updater.exe" -trimpath -ldflags "-s -w" ./cmd/seal-updater
           else
@@ -453,13 +465,22 @@ jobs:
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
         run: |
-          go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          go build -tags musl -o "output/$BINARY_NAME" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${CORE_CID::7} -X sealdice-core/dice.APP_CHANNEL=dev -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
           go build -tags musl -o "output/seal-updater" -trimpath -ldflags "-s -w -linkmode external -extldflags '-static'" ./cmd/seal-updater
+      - name: 记录构建来源
+        working-directory: ./sealdice-core
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          info = {name.lower(): os.environ[name] for name in ("BUILD_CID", "CORE_CID", "UI_CID", "BUILD_DATE", "PROJECT_VERSION_C")}
+          Path("output/build-info.json").write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
       - name: 附带 fwlog 许可文件
         working-directory: ./sealdice-core
         run: |
           mkdir -p output/licenses
-          cp licenses/fwlog-LICENSE.txt output/licenses/
+          cp licenses/*-LICENSE.txt output/licenses/
       - name: Run UPX
         uses: crazy-max/ghaction-upx@v3
         with:
@@ -471,16 +492,20 @@ jobs:
         with:
           name: sealdice-core_${{ env.PROJECT_VERSION_C }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: ./sealdice-core/output
+          if-no-files-found: error
 
   core-darwin-build:
     name: Build Core
     runs-on: macos-latest
     needs:
       - ui-build
-      - commit-num-check
+      - build-inputs
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_CID: ${{ needs.build-inputs.outputs.BUILD_CID }}
+      CORE_CID: ${{ needs.build-inputs.outputs.CORE_CID }}
+      UI_CID: ${{ needs.build-inputs.outputs.UI_CID }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: darwin/amd64 darwin/arm64
@@ -493,25 +518,35 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.CORE_REPO_TOKEN }}
-      - name: 检出构建指针指定的 Sharkcore
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive sealdice-core
+      - name: 校验 Core 构建输入
+        env:
+          CORE_CID: ${{ needs.build-inputs.outputs.CORE_CID }}
+        run: test "$(git -C sealdice-core rev-parse HEAD)" = "$CORE_CID"
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.14"
           cache-dependency-path: sealdice-core/go.sum
       - name: Install dependencies
         working-directory: ./sealdice-core
         run: |
-          go mod tidy
-          go get .
+          go mod download
+          go mod verify
+      - name: 准备前端嵌入目录
+        run: |
+          test -d ./sealdice-core/static/frontend
+          find ./sealdice-core/static/frontend -type f -delete
       - name: Get UI Resources
         uses: actions/download-artifact@v4
         with:
           name: sealdice-sharkui
           path: ./sealdice-core/static/frontend
+      - name: 校验并生成嵌入资源
+        working-directory: ./sealdice-core
+        run: |
+          test -s static/frontend/index.html
+          test -n "$(find static/frontend/assets -type f -name '*.js' -print -quit)"
+          go generate ./...
 
       - name: Get current time
         uses: Kaven-Universe/github-action-current-date-time@v1
@@ -541,24 +576,34 @@ jobs:
           SEAL_SIGN_V3_URL: ${{ secrets.SEAL_SIGN_V3_URL }}
         working-directory: ./sealdice-core
         run: |
-          go build -o "output/sealdice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${COMMIT_ID::7} -X sealdice-core/dice.APP_CHANNEL=dev  -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
+          go build -o "output/sealdice-core" -trimpath -ldflags "-s -w -X sealdice-core/dice.VERSION_PRERELEASE=-shark -X sealdice-core/dice.VERSION_BUILD_METADATA=+${CUR_TIME}.${CORE_CID::7} -X sealdice-core/dice.APP_CHANNEL=dev  -X 'sealdice-core/dice.DefaultSignUrl=${NT_SIGN_URL}' -X 'sealdice-core/dice.SealTrustedClientPrivateKey=${SEAL_TRUSTED_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignClientPrivateKey=${SEAL_SIGN_PRIVATE_KEY}' -X 'sealdice-core/dice.SealSignV3Url=${SEAL_SIGN_V3_URL}'" .
           go build -o "output/seal-updater" -trimpath -ldflags "-s -w" ./cmd/seal-updater
+      - name: 记录构建来源
+        working-directory: ./sealdice-core
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          info = {name.lower(): os.environ[name] for name in ("BUILD_CID", "CORE_CID", "UI_CID", "BUILD_DATE", "PROJECT_VERSION_C")}
+          Path("output/build-info.json").write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
       - name: 附带 fwlog 许可文件
         working-directory: ./sealdice-core
         run: |
           mkdir -p output/licenses
-          cp licenses/fwlog-LICENSE.txt output/licenses/
+          cp licenses/*-LICENSE.txt output/licenses/
       - name: Upload Core
         uses: actions/upload-artifact@v4
         with:
           name: sealdice-core_${{ env.PROJECT_VERSION_C }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: ./sealdice-core/output
+          if-no-files-found: error
 
   pc-pack:
     name: PC Pack
     runs-on: ubuntu-latest
     needs:
-      - commit-num-check
+      - build-inputs
       - resources-download
       # - gocqhttp-build
       - core-build
@@ -567,8 +612,8 @@ jobs:
       - lagrangeV2-setup
       - yogurt-setup
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
@@ -627,6 +672,18 @@ jobs:
           name: sealdice-core_${{ env.PROJECT_VERSION_C }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: .
 
+      - name: 校验完整安装包
+        env:
+          GOOS: ${{ matrix.goos }}
+        run: |
+          suffix=""
+          if [ "$GOOS" = "windows" ]; then suffix=".exe"; fi
+          test -s "sealdice-core$suffix"
+          test -s "seal-updater$suffix"
+          test -s build-info.json
+          test -s licenses/fwlog-LICENSE.txt
+          test -s licenses/eventsource-parser-LICENSE.txt
+          for directory in decks helpdoc images names; do test -d "data/$directory"; done
       - name: Set Execute Attribute
         if: matrix.goos != 'windows'
         run: chmod +x ./sealdice-core ./seal-updater
@@ -642,10 +699,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pc-pack
-      - commit-num-check
+      - build-inputs
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     strategy:
       matrix:
         # target: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
@@ -707,6 +764,7 @@ jobs:
           path: ${{ env.DIST }}
 
   prerelease:
+    if: github.ref == 'refs/heads/main'
     name: Prerelease
     runs-on: ubuntu-latest
     needs:
@@ -758,17 +816,18 @@ jobs:
       #     destination-dir: ./dev
 
   docker-push:
+    if: github.ref == 'refs/heads/main'
     name: Docker Push
     runs-on: ubuntu-latest
     needs:
       - pc-pack
-      - commit-num-check
+      - build-inputs
     permissions:
       contents: read
       packages: write
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -830,17 +889,18 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   docker-push-full:
+    if: github.ref == 'refs/heads/main'
     name: Docker Push (Full with Lagrange)
     runs-on: ubuntu-latest
     needs:
       - pc-pack
-      - commit-num-check
+      - build-inputs
     permissions:
       contents: read
       packages: write
     env:
-      BUILD_DATE: ${{ needs.commit-num-check.outputs.BUILD_DATE }}
-      PROJECT_VERSION_C: ${{ needs.commit-num-check.outputs.PROJECT_VERSION_C }}
+      BUILD_DATE: ${{ needs.build-inputs.outputs.BUILD_DATE }}
+      PROJECT_VERSION_C: ${{ needs.build-inputs.outputs.PROJECT_VERSION_C }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
